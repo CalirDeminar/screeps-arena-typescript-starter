@@ -1,19 +1,10 @@
-import { ATTACK, MOVE } from "game/constants";
-import { Creep, StructureSpawn } from "game/prototypes";
-import { getObjectsByPrototype } from "game/utils";
+import { Memory, MemoryKeeper, DefaultMemory } from 'coreLib/memory';
+import { HaulingManager } from 'arena_alpha_spawn_and_swamp/managers/haulingManager';
+import { CombatManager } from './managers/combatManager';
 
-let attacker: Creep | undefined;
+let memory: Memory = DefaultMemory;
 export function loop(): void {
-  if (!attacker) {
-    const mySpawn = getObjectsByPrototype(StructureSpawn).find(i => i.my);
-    if (mySpawn) {
-      attacker = mySpawn.spawnCreep([MOVE, ATTACK]).object;
-    }
-  } else {
-    const enemySpawn = getObjectsByPrototype(StructureSpawn).find(i => !i.my);
-    if (enemySpawn) {
-      attacker.moveTo(enemySpawn);
-      attacker.attack(enemySpawn);
-    }
-  }
+  memory = MemoryKeeper.houseKeeping(memory);
+  memory = CombatManager.run(memory);
+  memory = HaulingManager.run(memory);
 }
