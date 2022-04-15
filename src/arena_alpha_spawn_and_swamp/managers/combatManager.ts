@@ -7,11 +7,11 @@ import { Creep, Structure, StructureSpawn } from 'game/prototypes';
 import { getObjectById, getObjectsByPrototype } from 'game/utils';
 
 const trooperTemplate = [
-  ...Array(4).fill(MOVE),
   ...Array(3).fill(RANGED_ATTACK),
+  ...Array(4).fill(MOVE),
   ...Array(1).fill(HEAL),
 ];
-const squadSize = 4;
+const squadSize = 2;
 export class CombatManager {
   private static buildSquads(memory: Memory, mySpawn: StructureSpawn): Memory {
     let workingUpSquad = memory.mySquads.find((s) => !s.active);
