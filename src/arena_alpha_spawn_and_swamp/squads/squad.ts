@@ -1,5 +1,5 @@
-import { Memory, SquadRecord } from 'coreLib/memory';
-import { ATTACK, HEAL, TERRAIN_SWAMP, TERRAIN_WALL } from 'game/constants';
+import { CreepRecord, Memory, SquadRecord } from 'coreLib/memory';
+import { ATTACK, HEAL, MOVE, TERRAIN_SWAMP, TERRAIN_WALL } from 'game/constants';
 import { CostMatrix, searchPath } from 'game/path-finder';
 import { Creep, StructureSpawn, Structure, RoomPosition } from 'game/prototypes';
 import { findPath, getObjectsByPrototype, getTerrainAt } from 'game/utils';
@@ -8,7 +8,8 @@ export class Squad {
   private static moveSquad(
     squad: SquadRecord,
     hostileCreeps: Creep[],
-    target: Structure | Creep
+    target: Structure | Creep,
+    costMatrix: CostMatrix
   ): void {
     const { creeps, lead } = squad;
     const leadCreep = creeps.find((c) => c.creep.id === lead) || creeps[0];
@@ -31,32 +32,32 @@ export class Squad {
         hc.body.some((b) => b.type === ATTACK) &&
         hc.findInRange(
           creeps.map((mc) => mc.creep),
-          2
+          (hc.fatigue === 0 && hc.body.some((bp) => bp.type === MOVE)) ? 2 : 1
         ).length > 0
     );
-    let targetPoint = findPath(
+    const isFleeing = !!(nearbyMeleeCreeps[0]);
+    const targetPath = findPath(
       leadCreep.creep,
       nearbyMeleeCreeps[0] || target,
       {
-        flee: !!nearbyMeleeCreeps[0],
-        range: 2,
-        ignore: creeps.map((c) => c.creep)
+        flee: isFleeing,
+        range: isFleeing ? 5 : 1,
+        costMatrix: costMatrix
       }
-    )[1];
+    );
+    // console.log(`Squad ${squad.id} Path Len: `, targetPath.length);
+    const targetPoint = targetPath[1];
+    if(isFleeing){
+      console.log(`${squad.id} - Fleeing to: `, targetPoint);
+    }
     if(!targetPoint){
       return;
     }
-    const costMatrix = new CostMatrix();
-    for(let x=0; x<100;x++){
-        for(let y=0;y<100;y++){
-            const terrain = getTerrainAt({x, y});
-            const weight = terrain=== TERRAIN_WALL ? 255 : terrain === TERRAIN_SWAMP ? 10 : 1;
-            costMatrix.set(x, y, weight);
-        }
-    }
     hostileCreeps.map((c) => costMatrix.set(c.x, c.y, 255));
     [leadCreep, ...squadCreeps].reduce((costMatrix, creep) => {
+        costMatrix.set(targetPoint.x, targetPoint.x, creep.creep.id === leadCreep.creep.id ? 1 : 255);
         const step = findPath(creep.creep, targetPoint, {costMatrix: costMatrix})[0];
+        console.log(`Squad ${squad.id} Creep ${creep.creep.id} Moving: `, step)
         creep.creep.moveTo(step);
         costMatrix.set(step.x, step.y, 255);
         return costMatrix;
@@ -76,7 +77,7 @@ export class Squad {
     const range3Count = hostileCreeps.filter(
       (c) => c.getRangeTo(creep) === 3
     ).length;
-    return range1Count * 10 + range2Count * 4 + range3Count * 1 > 10;
+    return range1Count * 10 + range2Count * 4 + range3Count * 1 >= 10;
   }
 
   private static fireSquad(
@@ -85,23 +86,39 @@ export class Squad {
     target: Structure | Creep
   ): void {
     const { creeps } = squad;
+    const hostileHeals = hostileCreeps.filter((hc) => hc.body.some((b) => b.type === HEAL));
+    const targetHealer = hostileHeals.find((hh) => hh.getRangeTo(target) <= 1);
     creeps.map((c) => {
-      if (this.shouldMassAttack(c.creep, hostileCreeps)) {
-        c.creep.rangedMassAttack();
-      } else {
-        const inRangeHealer = hostileCreeps.find(
-          (hc) =>
-            hc.getRangeTo(c.creep) <= 4 && hc.body.some((b) => b.type === HEAL)
-        );
-        c.creep.rangedAttack(inRangeHealer || target);
+      switch(true){
+        case this.shouldMassAttack(c.creep, hostileCreeps):
+          c.creep.rangedMassAttack();
+          console.log(`Squad ${squad.id} Creep: ${c.creep.id} mass Attacking`);
+          break;
+        case targetHealer && c.creep.rangedAttack(targetHealer) >= 0:
+          console.log(`Squad ${squad.id} Creep: ${c.creep.id} attacking ${targetHealer?.id}`);
+          break;
+        case target && c.creep.rangedAttack(target) >= 0:
+          console.log(`Squad ${squad.id} Creep: ${c.creep.id} attacking ${target.id}`);
+          break;
+        default:
+          const fallback = c.creep.findClosestByRange(hostileCreeps);
+          const res = fallback ? c.creep.rangedAttack(fallback) : -1;
+          if(res >= 0){
+            console.log(`Squad ${squad.id} Creep: ${c.creep.id} attacking ${fallback?.id}`);
+          }
       }
     });
   }
 
   private static healSquad(squad: SquadRecord): void {
     const { creeps } = squad;
-    const healTarget = creeps.sort((c) => c.creep.hits)[0];
-    creeps.map((c) => c.creep.heal(healTarget.creep));
+    const healthSorted = creeps
+    healthSorted.sort((a, b) => a.creep.hits - b.creep.hits);
+    const healTarget = healthSorted[0];
+    console.log(`Squad ${squad.id} Health: `, healthSorted.map((h) => h.creep.hits), `Healing: ${healTarget.creep.id} at: ${healTarget.creep.hits}`);
+    if(healTarget){
+      creeps.map((c) => c.creep.heal(healTarget.creep));
+    }
   }
 
   public static run(
@@ -119,12 +136,12 @@ export class Squad {
     const hostileCreeps = getObjectsByPrototype(Creep).filter(c => !c.my);
     const hostileSpawn = getObjectsByPrototype(StructureSpawn).filter(s => !s.my)[0];
 
-    const targetPos = leadCreep.creep.findClosestByPath(hostileCreeps);
-    const target = hostileCreeps.find(c => targetPos && c.getRangeTo(targetPos) === 0) || hostileSpawn;
+    const target = leadCreep.creep.findClosestByPath(hostileCreeps) || hostileSpawn;
+    console.log(`Squad: ${squad.id} - Target: `, {x: target.x, y: target.y})
     // healing
     this.healSquad(squad);
     // movement
-    this.moveSquad(squad, hostileCreeps, target);
+    this.moveSquad(squad, hostileCreeps, target, memory.costMatrix);
     // firing
     this.fireSquad(squad, hostileCreeps, target);
 
@@ -132,6 +149,7 @@ export class Squad {
       ...squad,
       lead: leadCreep.creep.id
     };
+    console.log(`----------`)
     return {
       ...memory,
       mySquads: memory.mySquads.map(s => (s.id === endSquadState.id ? endSquadState : s))
