@@ -2,7 +2,7 @@ import { CreepUtils } from "coreLib/creepUtils";
 import { Memory, CreepRecord } from "coreLib/memory";
 import { CARRY, MOVE, RESOURCE_ENERGY } from "game/constants";
 import { CostMatrix } from "game/path-finder";
-import { StructureContainer, StructureSpawn } from "game/prototypes";
+import { Creep, StructureContainer, StructureSpawn } from "game/prototypes";
 import { getObjectsByPrototype } from "game/utils";
 
 export class Haulers {
@@ -58,6 +58,13 @@ export class Haulers {
   ): CreepRecord {
     const { creep, memory } = hauler;
     let working = memory.working;
+    const hostileCreeps = getObjectsByPrototype(Creep).filter((c) => !c.my && c.getRangeTo(creep) <= 4);
+    const closestCreep = creep.findClosestByPath(hostileCreeps);
+    if(closestCreep){
+      const path = creep.findPathTo(closestCreep, {flee: true, range: 10, costMatrix: damageMatrix});
+      CreepUtils.moveWithMatrix(creep, path[0], costMatrix);
+      return hauler;
+    }
     if (creep.store.getUsedCapacity() || 0 > 0) {
       working = false;
     } else {
@@ -81,18 +88,18 @@ export class Haulers {
     const target = creep.findClosestByPath(harvestContainers);
     if (target) {
       switch (true) {
-        case working && creep.getRangeTo(target) > 2:
+        case working && creep.getRangeTo(target) > 1:
           CreepUtils.moveWithMatrix(creep, target, costMatrix, moveArgs);
           break;
-        case working && creep.getRangeTo(target) <= 2:
-          CreepUtils.moveWithMatrix(creep, target, costMatrix, moveArgs);
+        case working && creep.getRangeTo(target) <= 1:
+          // CreepUtils.moveWithMatrix(creep, target, costMatrix, moveArgs);
           creep.withdraw(target, RESOURCE_ENERGY);
           break;
-        case !working && creep.getRangeTo(storeTarget || mySpawn) > 2:
+        case !working && creep.getRangeTo(storeTarget || mySpawn) > 1:
           CreepUtils.moveWithMatrix(creep, storeTarget || mySpawn, costMatrix, moveArgs);
           break;
-        case !working && creep.getRangeTo(storeTarget || mySpawn) <= 2:
-          CreepUtils.moveWithMatrix(creep, storeTarget || mySpawn, costMatrix, moveArgs);
+        case !working && creep.getRangeTo(storeTarget || mySpawn) <= 1:
+          // CreepUtils.moveWithMatrix(creep, storeTarget || mySpawn, costMatrix, moveArgs);
           creep.transfer(storeTarget || mySpawn, RESOURCE_ENERGY);
           break;
       }
