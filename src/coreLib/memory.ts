@@ -3,6 +3,8 @@ import { ATTACK, TERRAIN_SWAMP, TERRAIN_WALL } from 'game/constants';
 import { CostMatrix } from 'game/path-finder';
 import { Creep, Id, Structure } from 'game/prototypes';
 import { getObjectsByPrototype } from 'game/utils';
+import { DamageMatrix } from './damageMatrix';
+import { MovementMatrix } from './movementMatrix';
 export interface CreepRecord {
   creep: Creep;
   memory: {
@@ -20,11 +22,13 @@ export interface Memory {
   myCreeps: CreepRecord[];
   mySquads: SquadRecord[];
   costMatrix: CostMatrix;
+  hostileDamageMatrix: CostMatrix;
 }
 export const DefaultMemory = {
   myCreeps: [],
   mySquads: [],
   costMatrix: new CostMatrix(),
+  hostileDamageMatrix: new CostMatrix()
 };
 export class MemoryKeeper {
   public static houseKeeping(staleMemory: Memory): Memory {
@@ -50,20 +54,12 @@ export class MemoryKeeper {
             costMatrix.set(x, y, weight);
         }
     }
-    const hostileMeleeCreeps = getObjectsByPrototype(Creep).filter((c) => !c.my && c.body.some((bd) => bd.type === ATTACK));
-    hostileMeleeCreeps.map((hc) => {
-      const range = hc.fatigue === 0 ? 2 : 1;
-      for(let x=-1 * range; x < range + 1; x++){
-        for(let y=-1 *range; y < range + 1; y++){
-          costMatrix.set(Math.max(0, hc.x + x), Math.min(99, hc.y + y), 20);
-        }
-      }
-    })
     return {
       ...staleMemory,
       myCreeps: updatedCreeps,
       mySquads: updatedSquads,
-      costMatrix: costMatrix
+      costMatrix: MovementMatrix.generateMatrix(),
+      hostileDamageMatrix: DamageMatrix.generateMatrix()
     };
   }
 }
