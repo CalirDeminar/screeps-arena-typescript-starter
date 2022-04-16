@@ -12,7 +12,7 @@ export class CreepUtils {
         const step = path[0];
         const currentTerrain = getTerrainAt(creep);
         const currentWeight = currentTerrain === TERRAIN_WALL ? 255 : currentTerrain === TERRAIN_SWAMP ? 10 : 1
-        if(creep.moveTo(step)||0>=0){
+        if(creep.fatigue <= 0 && step && creep.moveTo(step)||0>=0){
             costMatrix.set(step.x, step.y, 255);
             costMatrix.set(creep.x, creep.y, currentWeight);
         }
