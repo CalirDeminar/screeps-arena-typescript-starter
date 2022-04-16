@@ -18,24 +18,17 @@ export class MovementMatrix {
       }
     }
   }
-  public static generateMatrix(): CostMatrix {
+  public static generateMatrix(damageMatrix: CostMatrix): CostMatrix {
     const costMatrix = new CostMatrix();
     for (let x = 0; x < 100; x++) {
       for (let y = 0; y < 100; y++) {
         const terrain = getTerrainAt({ x, y });
         const weight = terrain === TERRAIN_WALL ? 255 : terrain === TERRAIN_SWAMP ? 10 : 1;
-        costMatrix.set(x, y, weight);
+        const damage = 0;
+        const damageWeight = weight === 10 ? damage * 2 : damage;
+        costMatrix.set(x, y, Math.max(weight, damageWeight));
       }
     }
-    const hostileMeleeCreeps = getObjectsByPrototype(Creep).filter(c => !c.my && c.body.some(bd => bd.type === ATTACK));
-    hostileMeleeCreeps.map(hc => {
-      const range = hc.fatigue === 0 ? 2 : 1;
-      for (let x = -1 * range; x < range + 1; x++) {
-        for (let y = -1 * range; y < range + 1; y++) {
-          costMatrix.set(Math.max(0, hc.x + x), Math.min(99, hc.y + y), 20);
-        }
-      }
-    });
     getObjectsByPrototype(StructureSpawn).map((spawn) => costMatrix.set(spawn.x, spawn.y, 255))
     return costMatrix;
   }

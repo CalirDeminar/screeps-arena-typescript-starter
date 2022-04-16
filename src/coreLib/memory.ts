@@ -8,7 +8,7 @@ import { MovementMatrix } from './movementMatrix';
 export interface CreepRecord {
   creep: Creep;
   memory: {
-    role: 'hauler' | 'boxer' | 'harvester' | 'trooper';
+    role: 'hauler' | 'boxer' | 'harvester' | 'trooper' | 'fastHauler' | 'queen';
     working?: boolean;
   };
 }
@@ -54,12 +54,13 @@ export class MemoryKeeper {
             costMatrix.set(x, y, weight);
         }
     }
+    const damageMatrix = DamageMatrix.generateMatrix();
     return {
       ...staleMemory,
       myCreeps: updatedCreeps,
       mySquads: updatedSquads,
-      costMatrix: MovementMatrix.generateMatrix(),
-      hostileDamageMatrix: DamageMatrix.generateMatrix()
+      costMatrix: MovementMatrix.generateMatrix(damageMatrix),
+      hostileDamageMatrix: damageMatrix
     };
   }
 }

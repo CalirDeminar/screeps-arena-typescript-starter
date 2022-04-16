@@ -3,6 +3,7 @@ import { ATTACK, ATTACK_POWER, HEAL, HEAL_POWER, RANGED_ATTACK, RANGED_ATTACK_PO
 import { CostMatrix } from "game/path-finder";
 import { Creep } from "game/prototypes";
 import { Visual } from "game/visual";
+import { CreepUtils } from "./creepUtils";
 
 export class DamageMatrix {
   private static clampPosition(no: number): number {
@@ -39,14 +40,14 @@ export class DamageMatrix {
     const matrix = new CostMatrix();
     hostileCreeps.map(creep => {
       // melee
-      const meleeRange = creep.fatigue === 0 ? 2 : 1;
+      const meleeRange = CreepUtils.creepCanMove(creep) ? 2 : 1;
       this.runForRange({ x: creep.x, y: creep.y }, meleeRange, (x: number, y: number) => {
         const currentValue = matrix.get(x, y);
         const newValue = currentValue + creep.body.filter(b => b.type === ATTACK).length * (ATTACK_POWER/10);
         matrix.set(x, y, newValue);
       });
       // rangedAttack
-      const rangedRange = creep.fatigue === 0 ? 4 : 3;
+      const rangedRange = CreepUtils.creepCanMove(creep) ? 4 : 3;
       this.runForRange({ x: creep.x, y: creep.y }, rangedRange, (x: number, y: number) => {
         const currentValue = matrix.get(x, y);
         const newValue = currentValue + creep.body.filter(b => b.type === RANGED_ATTACK).length * (RANGED_ATTACK_POWER/10);
