@@ -1,5 +1,6 @@
+import { CreepUtils } from "coreLib/creepUtils";
 import { SquadRecord } from "coreLib/memory";
-import { HEAL } from "game/constants";
+import { ATTACK, HEAL, RANGED_ATTACK } from "game/constants";
 import { Creep, Structure } from "game/prototypes";
 
 export class SquadFiring {
@@ -11,8 +12,17 @@ export class SquadFiring {
   }
   public static run(squad: SquadRecord, hostileCreeps: Creep[], target: Structure | Creep): void {
     const { creeps } = squad;
-    const hostileHeals = hostileCreeps.filter(hc => hc.body.some(b => b.type === HEAL));
-    const targetHealer = hostileHeals.find(hh => hh.getRangeTo(target) <= 1);
+    const hostileHeals = hostileCreeps
+      .filter(hc => hc.body.some(b => b.type === HEAL))
+      .filter(hh => hh.getRangeTo(target) <= 1);
+    hostileHeals.sort(
+      hh =>
+        CreepUtils.countBodyPart(hh, HEAL) +
+        CreepUtils.countBodyPart(hh, ATTACK) * 0.1 +
+        CreepUtils.countBodyPart(hh, RANGED_ATTACK) * 0.01
+    );
+    hostileHeals.reverse();
+    const targetHealer = hostileHeals[0];
     creeps.map(c => {
       switch (true) {
         case this.shouldMassAttack(c.creep, hostileCreeps):

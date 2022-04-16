@@ -25,12 +25,10 @@ export class SquadMoving {
         const path = c.creep.findPathTo(leadCreep.creep);
         CreepUtils.moveWithMatrix(c.creep, path[0], costMatrix, { costMatrix });
       });
-      creeps.filter(c => !laggingCreeps.includes(c)).map(c => costMatrix.set(c.creep.x, c.creep.y, 255));
       return;
     }
     //fatigue
     if (creeps.some(c => c.creep.fatigue > 0)) {
-      creeps.map(c => costMatrix.set(c.creep.x, c.creep.y, 255));
       console.log(`Squad: ${squad.id}: Fatigue`);
       return;
     }
@@ -76,10 +74,8 @@ export class SquadMoving {
       );
     }
     if (!targetPoint) {
-      creeps.map(c => costMatrix.set(c.creep.x, c.creep.y, 255));
       return;
     }
-    hostileCreeps.map(c => costMatrix.set(c.x, c.y, 255));
     [leadCreep, ...squadCreeps].reduce((costMatrix, creep) => {
       costMatrix.set(targetPoint.x, targetPoint.x, creep.creep.id === leadCreep.creep.id ? 1 : 255);
       const step = findPath(creep.creep, targetPoint, { costMatrix: costMatrix })[0];

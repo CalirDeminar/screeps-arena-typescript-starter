@@ -29,7 +29,8 @@ export class MovementMatrix {
         costMatrix.set(x, y, Math.max(weight, damageWeight));
       }
     }
-    getObjectsByPrototype(StructureSpawn).map((spawn) => costMatrix.set(spawn.x, spawn.y, 255))
+    getObjectsByPrototype(StructureSpawn).map((spawn) => costMatrix.set(spawn.x, spawn.y, 255));
+    getObjectsByPrototype(Creep).map((c) => costMatrix.set(c.x, c.y, 255))
     return costMatrix;
   }
 }
