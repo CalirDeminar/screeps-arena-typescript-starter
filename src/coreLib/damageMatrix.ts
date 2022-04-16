@@ -43,14 +43,14 @@ export class DamageMatrix {
       const meleeRange = CreepUtils.creepCanMove(creep) ? 2 : 1;
       this.runForRange({ x: creep.x, y: creep.y }, meleeRange, (x: number, y: number) => {
         const currentValue = matrix.get(x, y);
-        const newValue = currentValue + creep.body.filter(b => b.type === ATTACK).length * (ATTACK_POWER/10);
+        const newValue = currentValue + CreepUtils.countBodyPart(creep, ATTACK) * (ATTACK_POWER/10);
         matrix.set(x, y, newValue);
       });
       // rangedAttack
       const rangedRange = CreepUtils.creepCanMove(creep) ? 4 : 3;
       this.runForRange({ x: creep.x, y: creep.y }, rangedRange, (x: number, y: number) => {
         const currentValue = matrix.get(x, y);
-        const newValue = currentValue + creep.body.filter(b => b.type === RANGED_ATTACK).length * (RANGED_ATTACK_POWER/10);
+        const newValue = currentValue + CreepUtils.countBodyPart(creep, RANGED_ATTACK) * (RANGED_ATTACK_POWER/10);
         matrix.set(x, y, newValue);
       });
     });
@@ -58,7 +58,7 @@ export class DamageMatrix {
     friendlyCreeps.map((creep) => {
         const longHealRange = 3;
         const shortHealRange = 1;
-        const healPartCount = creep.body.filter((part) => part.type === HEAL).length;
+        const healPartCount = CreepUtils.countBodyPart(creep, HEAL);
         const longHealAmount = healPartCount * (RANGED_HEAL_POWER/10);
         const shortHealAmount = healPartCount * ((HEAL_POWER - RANGED_HEAL_POWER)/10);
         this.runForRange({x: creep.x, y: creep.y}, longHealRange, (x: number, y: number) => {

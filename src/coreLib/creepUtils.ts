@@ -19,6 +19,6 @@ export class CreepUtils {
 
     }
     public static countBodyPart(creep: Creep, part: MOVE | CARRY | ATTACK | RANGED_ATTACK | HEAL): number {
-        return creep.body.filter((p) => p.type === part).length;
+        return creep.body.filter((p) => p.type === part && p.hits > 0).length;
     }
 }
